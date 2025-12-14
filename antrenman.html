@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Az Kelime Çok İşlem — Antrenman Modu</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .app-title { text-align: center; margin-top: 30px; margin-bottom: 10px; font-weight: bold; color: #2c3e50; }
+        .app-subtitle { text-align: center; margin-bottom: 30px; color: #7f8c8d; font-size: 1.2rem; }
+        
+        .slot-box {
+            width: 110px; height: 130px;
+            background-color: #fff; border: 3px solid #333; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 3.5rem; font-weight: bold; margin: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            user-select: none;
+        }
+        .slot-box.joker { color: red; border-color: #dc3545; }
+        .slot-box.target-box { width: auto; padding: 0 30px; height: 140px; font-size: 5rem; color: #0d6efd; border-color: #0d6efd; }
+        
+        .timer-display { font-size: 3.5rem; font-weight: bold; color: #dc3545; font-family: monospace; }
+        
+        .nav-tabs .nav-link { font-size: 1.3rem; font-weight: 600; padding: 15px 30px; }
+        .nav-tabs .nav-link.active { background-color: #fff; border-bottom-color: transparent; color: #0d6efd; }
+        
+        .control-panel { margin-top: 30px; }
+        
+        /* Mobil uyumluluk için ufak ayarlar */
+        @media (max-width: 768px) {
+            .slot-box { width: 60px; height: 80px; font-size: 2rem; margin: 4px; }
+            .slot-box.target-box { font-size: 3rem; height: 100px; }
+            .timer-display { font-size: 2.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="app-title">ANTRENMAN MODU</h1>
+    <p class="app-subtitle">Sadece Üretim ve Pratik</p>
+
+    <ul class="nav nav-tabs justify-content-center" id="trainingTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-islem" data-bs-toggle="tab" data-bs-target="#content-islem" type="button">İşlem Üret</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-kelime" data-bs-toggle="tab" data-bs-target="#content-kelime" type="button">Kelime Üret</button>
+        </li>
+    </ul>
+
+    <div class="tab-content p-4 bg-white border border-top-0 rounded-bottom shadow-sm" id="trainingTabsContent">
+        
+        <div class="tab-pane fade show active text-center" id="content-islem">
+            <div class="mb-4">
+                <span class="h2 text-muted">HEDEF SAYI</span>
+                <div class="d-flex justify-content-center mt-2">
+                    <div id="targetDisplay" class="slot-box target-box">???</div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-center flex-wrap mb-4" id="numberSlotsContainer">
+                <div class="slot-box">?</div><div class="slot-box">?</div><div class="slot-box">?</div>
+                <div class="slot-box">?</div><div class="slot-box">?</div><div class="slot-box" style="background-color:#fff3cd">?</div>
+            </div>
+
+            <div class="control-panel">
+                <div class="row justify-content-center align-items-center mb-4">
+                    <div class="col-auto">
+                        <div id="timerNum" class="timer-display">01:00</div>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-warning btn-lg" onclick="toggleTimer('num')">Süre Durdur/Devam</button>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-lg px-5 py-3 fs-4" onclick="generateNumbers()">Yeni Soru Üret</button>
+            </div>
+        </div>
+
+        <div class="tab-pane fade text-center" id="content-kelime">
+            <div class="d-flex justify-content-center flex-wrap mb-5 mt-4" id="letterSlotsContainer">
+                <div class="slot-box">?</div><div class="slot-box">?</div><div class="slot-box">?</div>
+                <div class="slot-box">?</div><div class="slot-box">?</div><div class="slot-box">?</div>
+                <div class="slot-box">?</div><div class="slot-box">?</div><div class="slot-box joker">*</div>
+            </div>
+
+            <div class="control-panel">
+                <div class="row justify-content-center align-items-center mb-4">
+                    <div class="col-auto">
+                        <div id="timerWord" class="timer-display">01:00</div>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-warning btn-lg" onclick="toggleTimer('word')">Süre Durdur/Devam</button>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-lg px-5 py-3 fs-4" onclick="generateLetters()">Yeni Harf Üret</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// --- SABİTLER ---
+const TWO_DIGITS = [25, 40, 50, 60, 75, 90];
+const VOWELS = ["A", "E", "I", "İ", "O", "Ö", "U", "Ü"];
+const ALL_LETTERS = [
+    "A","B","C","Ç","D","E","F","G","Ğ","H","I","İ","J","K","L","M","N","O","Ö","P","R","S","Ş","T","U","Ü","V","Y","Z"
+];
+const LETTER_WEIGHTS = {
+    "A": 11, "B": 3, "C": 2, "Ç": 2, "D": 4, "E": 9, "F": 1, "G": 3, "Ğ": 1, "H": 2,
+    "I": 5, "İ": 7, "J": 1, "K": 5, "L": 6, "M": 4, "N": 6, "O": 2, "Ö": 1, "P": 2,
+    "R": 6, "S": 5, "Ş": 2, "T": 6, "U": 3, "Ü": 2, "V": 2, "Y": 3, "Z": 2
+};
+
+// --- SES SİSTEMİ ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playBeep(freq, duration) {
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.value = freq;
+    osc.type = 'square';
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    setTimeout(() => osc.stop(), duration);
+}
+
+function playGong() {
+    playBeep(660, 140);
+    setTimeout(() => playBeep(550, 170), 150);
+    setTimeout(() => playBeep(440, 400), 320);
+}
+
+// --- ZAMANLAYICI YÖNETİMİ ---
+let timerInterval = null;
+let timeLeft = 60;
+let isTimerRunning = false;
+let activeTimerDisplayId = '';
+
+function resetTimer(displayId) {
+    clearInterval(timerInterval);
+    isTimerRunning = false;
+    timeLeft = 60;
+    activeTimerDisplayId = displayId;
+    updateTimerUI();
+}
+
+function startTimer() {
+    if (isTimerRunning) return;
+    isTimerRunning = true;
+    updateTimerUI();
+    
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerUI();
+        
+        // Son 5 saniye tick sesi
+        if (timeLeft <= 5 && timeLeft > 0) playBeep(900, 70);
+        
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+            playBeep(220, 650); // Süre bitti sesi (deep beep)
+            alert("Süre Doldu!");
+        }
+    }, 1000);
+}
+
+function toggleTimer(type) {
+    activeTimerDisplayId = (type === 'num') ? 'timerNum' : 'timerWord';
+    if (isTimerRunning) {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+    } else {
+        if(timeLeft > 0) startTimer();
+    }
+}
+
+function updateTimerUI() {
+    if(!activeTimerDisplayId) return;
+    const el = document.getElementById(activeTimerDisplayId);
+    const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+    const s = (timeLeft % 60).toString().padStart(2, '0');
+    el.innerText = `${m}:${s}`;
+}
+
+// --- İŞLEM MANTIĞI ---
+function generateNumbers() {
+    resetTimer('timerNum');
+    
+    // 1-9 arası 5 sayı üret (Python'daki bad_pattern kontrolü ile)
+    let singles = [];
+    while(true) {
+        singles = Array.from({length: 5}, () => Math.floor(Math.random() * 9) + 1);
+        const unique = new Set(singles);
+        const sorted = [...singles].sort((a,b)=>a-b).join('');
+        // Hepsi aynı değilse VE 12345 sıralı değilse kabul et
+        if (unique.size > 1 && sorted !== "12345") break;
+    }
+    
+    const twoDigit = TWO_DIGITS[Math.floor(Math.random() * TWO_DIGITS.length)];
+    const numbers = [...singles, twoDigit];
+    const target = Math.floor(Math.random() * (999 - 301 + 1)) + 301;
+    
+    // UI Hazırla
+    const container = document.getElementById('numberSlotsContainer');
+    container.innerHTML = '';
+    document.getElementById('targetDisplay').innerText = "???";
+    
+    for(let i=0; i<6; i++) {
+        const div = document.createElement('div');
+        div.className = 'slot-box';
+        if(i===5) div.style.backgroundColor = '#fff3cd'; // Çift basamaklı rengi
+        div.innerText = "";
+        container.appendChild(div);
+    }
+
+    // Sırayla Açma Animasyonu
+    let idx = 0;
+    function revealNext() {
+        if (idx < 6) {
+            container.children[idx].innerText = numbers[idx];
+            playBeep(1000, 50); // Kısa bip
+            idx++;
+            setTimeout(revealNext, 800);
+        } else {
+            document.getElementById('targetDisplay').innerText = target;
+            playGong();
+            startTimer();
+        }
+    }
+    revealNext();
+}
+
+// --- KELİME MANTIĞI ---
+function generateLetters() {
+    resetTimer('timerWord');
+    
+    // Ağırlıklı Rastgele Seçim Fonksiyonu
+    function weightedRandom(pool) {
+        let items = [], weights = [];
+        pool.forEach(p => { items.push(p[0]); weights.push(p[1]); });
+        
+        let total = weights.reduce((a,b)=>a+b, 0);
+        let r = Math.random() * total;
+        for(let i=0; i<items.length; i++) {
+            r -= weights[i];
+            if(r < 0) return items[i];
+        }
+        return items[0];
+    }
+
+    // Sesli / Sessiz Havuzları
+    let vowelPool = [], consPool = [];
+    ALL_LETTERS.forEach(l => {
+        const w = LETTER_WEIGHTS[l] || 1;
+        if(VOWELS.includes(l)) vowelPool.push([l, w]);
+        else consPool.push([l, w]);
+    });
+
+    // 3 veya 4 sesli harf seçimi
+    const vCount = Math.random() < 0.5 ? 3 : 4;
+    const cCount = 8 - vCount;
+
+    let selected = [];
+    for(let i=0; i<vCount; i++) selected.push(weightedRandom(vowelPool));
+    for(let i=0; i<cCount; i++) selected.push(weightedRandom(consPool));
+
+    // Karıştır
+    selected.sort(() => Math.random() - 0.5);
+    
+    // Joker ekle (Sona)
+    selected.push("*");
+    
+    // UI Hazırla
+    const container = document.getElementById('letterSlotsContainer');
+    container.innerHTML = '';
+    
+    for(let i=0; i<9; i++) {
+        const div = document.createElement('div');
+        div.className = 'slot-box';
+        if(i===8) div.className += ' joker'; // Joker stili
+        div.innerText = "";
+        container.appendChild(div);
+    }
+
+    // Sırayla Açma Animasyonu
+    let idx = 0;
+    function revealLetter() {
+        if(idx < 9) {
+            container.children[idx].innerText = selected[idx];
+            playBeep(1000, 50);
+            idx++;
+            setTimeout(revealLetter, 800);
+        } else {
+            playGong();
+            startTimer();
+        }
+    }
+    revealLetter();
+}
+</script>
+
+</body>
+</html>
